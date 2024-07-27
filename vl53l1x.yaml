@@ -1,0 +1,10 @@
+packages:
+  device: !include device.yaml # include our test device setup
+
+sensor:
+  - platform: vl53l1x_sensor
+    name: Empty sensor
+
+i2c:
+  sda: 4
+  scl: 5
