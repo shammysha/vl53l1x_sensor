@@ -19,8 +19,23 @@ class VL53L1XSensor : public sensor::Sensor, public PollingComponent, public i2c
 
     void loop() override;
 
-    protected:
+    void set_timeout_us(uint32_t timeout_us) { this->timeout_us_ = timeout_us; }
+
+    private:
+    void startRanging();
+    void stopRanging();
+    bool checkForDataReady();
+    uint8_t getInterruptPolarity();
+    void clearInterrupt();
+    uint16_t sensorId();
+    uint16_t readWord(uint16_t reg_idx);
+
+
     static std::list<VL53L1XSensor *> vl53_sensors;
+    static bool enable_pin_setup_complete;
+    GPIOPin *enable_pin_{nullptr};
+    uint16_t timeout_start_us_;
+    uint16_t timeout_us_{};
 };
 
 } //namespace vl53l1x
