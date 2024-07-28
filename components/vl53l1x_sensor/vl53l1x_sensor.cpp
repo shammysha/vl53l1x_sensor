@@ -175,10 +175,11 @@ void VL53L1XSensor::setup() {
       reg(0x000b) = 0x00;
       uint16_t sensor_id = sensorId();
       if(sensor_id != 0xEACC){
-        ESP_LOGD(TAG,"Wrong sensor id for '%s': %s", this->name_.c_str(), sensor_id);
+        ESP_LOGE(TAG,"Wrong sensor id for '%s': %s", this->name_.c_str(), sensor_id);
         this->mark_failed();
         return;
       }
+      ESP_LOGI(TAG,"'%s' - Setup completed", this->name_.c_str());
 }
 
 void VL53L1XSensor::loop() {
