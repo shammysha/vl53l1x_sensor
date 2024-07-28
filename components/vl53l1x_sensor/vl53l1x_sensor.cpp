@@ -202,6 +202,9 @@ void VL53L1XSensor::dump_config() {
         LOG_PIN("  IRQ Pin: ", this->irq_pin_);
     }
     ESP_LOGCONFIG(TAG, "  Timeout: %u%s", this->timeout_us_, this->timeout_us_ > 0 ? "us" : " (no timeout)");
+    ESP_LOGCONFIG(TAG, "  Distance mode: %u", this->distance_mode_);
+    ESP_LOGCONFIG(TAG, "  Timing budget: %ums", this->timing_budget_ms_);
+    ESP_LOGCONFIG(TAG, "  Signal threshold: %u", this->signal_threshold_);
 }
 
 void VL53L1XSensor::startRanging(){
