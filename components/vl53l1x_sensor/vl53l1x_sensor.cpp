@@ -157,7 +157,7 @@ void VL53L1XSensor::setup() {
         uint8_t Addr = 0x00;
         for (Addr = 0x2D; Addr <= 0x87; Addr++)
            {
-            reg(Addr) = VL51L1X_DEFAULT_CONFIGURATION[Addr - 0x2D];
+            reg16(Addr) = VL51L1X_DEFAULT_CONFIGURATION[Addr - 0x2D];
            }
        ESP_LOGD(TAG, "'%s' - startRanging", this->name_.c_str());
        startRanging();
@@ -172,8 +172,8 @@ void VL53L1XSensor::setup() {
       ESP_LOGD(TAG, "'%s' - stopRanging", this->name_.c_str());
       stopRanging();
       ESP_LOGD(TAG, "'%s' - 0x0008=0x09 0x000b=0x00", this->name_.c_str());
-      reg(0x0008) = 0x09;
-      reg(0x000b) = 0x00;
+      reg16(0x0008) = 0x09;
+      reg16(0x000b) = 0x00;
       uint16_t sensor_id = sensorId();
       if(sensor_id != 0xEACC){
         ESP_LOGE(TAG,"Wrong sensor id for '%s': 0x%04X", this->name_.c_str(), sensor_id);
@@ -209,14 +209,14 @@ void VL53L1XSensor::startRanging(){
 }
 
 void VL53L1XSensor::stopRanging(){
-    reg(0x0087) = 0x00;
+    reg16(0x0087) = 0x00;
 }
 
 
 bool VL53L1XSensor::checkForDataReady(){
 
    uint8_t intPol = getInterruptPolarity();
-   uint8_t temp = reg(0x0031).get();
+   uint8_t temp = reg16(0x0031).get();
    /* Read in the register to check if a new value is available */
   if ((temp & 1) == intPol)
      return 1;
@@ -225,13 +225,13 @@ bool VL53L1XSensor::checkForDataReady(){
 }
 
 uint8_t VL53L1XSensor::getInterruptPolarity() {
-   uint8_t temp = reg(0x0030).get();
+   uint8_t temp = reg16(0x0030).get();
    temp = temp & 0x10;
    return !(temp>>4);
 }
 
 void VL53L1XSensor::clearInterrupt(){
-    reg(0x0086) = 0x01;
+    reg16(0x0086) = 0x01;
 }
 
 uint16_t VL53L1XSensor::sensorId()
@@ -242,15 +242,15 @@ uint16_t VL53L1XSensor::sensorId()
 
 uint16_t VL53L1XSensor::readWord(uint16_t reg_idx){
     uint16_t buffer[2] = {0,0};
-    buffer[0] = reg(reg_idx).get();
-    buffer[1] = reg(reg_idx + 1).get();
+    buffer[0] = reg16(reg_idx).get();
+    buffer[1] = reg16(reg_idx + 1).get();
     ESP_LOGD(TAG, "'%s' - 0x%04X = {0x%02X 0x%02X}", this->name_.c_str(), reg_idx, buffer[0], buffer[1]);
     uint16_t data = (buffer[0] << 8) + buffer[1];
     return data;
 }
 
 void VL53L1XSensor::setI2CAddress(uint8_t addr) {
-    reg(0x0001) = addr;
+    reg16(0x0001) = addr;
     this->set_i2c_address(addr);
 }
 
