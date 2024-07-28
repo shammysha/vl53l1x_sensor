@@ -1,6 +1,11 @@
 packages:
   device: !include device.yaml # include our test device setup
 
+external_components:
+  - source:
+      type: local
+      path: components
+
 sensor:
   - platform: vl53l1x_sensor
     name: Empty sensor
