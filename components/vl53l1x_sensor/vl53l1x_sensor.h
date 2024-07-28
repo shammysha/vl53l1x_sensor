@@ -24,6 +24,7 @@ class VL53L1XSensor : public sensor::Sensor, public PollingComponent, public i2c
     void set_irq_pin(GPIOPin *irq) { this->irq_pin_ = irq; }
 
     private:
+    void setI2CAddress(uint8_t addr);
     void startRanging();
     void stopRanging();
     bool checkForDataReady();

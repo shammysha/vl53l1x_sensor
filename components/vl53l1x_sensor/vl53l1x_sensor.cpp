@@ -114,28 +114,29 @@ void VL53L1XSensor::setup() {
         if (vl53_sensor->enable_pin_ != nullptr) {
           // Set enable pin as OUTPUT and disable the enable pin to force vl53 to HW Standby mode
           vl53_sensor->enable_pin_->setup();
+          vl53_sensor->enable_pin_->digital_write(true);
           vl53_sensor->enable_pin_->digital_write(false);
         }
       }
       esphome::vl53l1x::VL53L1XSensor::enable_pin_setup_complete = true;
+      delay(5);
     }
 
     if (this->enable_pin_ != nullptr) {
-      // Enable the enable pin to cause FW boot (to get back to 0x29 default address)
       this->enable_pin_->digital_write(true);
-      delayMicroseconds(100);
+      delay(5);
     }
 
-    // Save the i2c address we want and force it to use the default 0x29
-    // until we finish setup, then re-address to final desired address.
     uint8_t final_address = address_;
+    ESP_LOGD(TAG, "'%s' - set addr 0x%02X", this->name_.c_str(), final_address);
+    //InitSensor
     this->set_i2c_address(0x29);
 
     {
     uint8_t byteData;
     uint8_t wordData;
-      wordData = sensorId(); // VL53L1_IDENTIFICATION__MODEL_ID
-      ESP_LOGD(TAG, "VL53L1X Model_ID: 0x%04X", wordData);
+      byteData = reg16(0x010F).get(); // VL53L1_IDENTIFICATION__MODEL_ID
+      ESP_LOGD(TAG, "VL53L1X Model_ID: 0x%02X", byteData);
       byteData = reg16(0x0110).get(); // VL53L1_IDENTIFICATION__MODULE_TYPE
       ESP_LOGD(TAG, "VL53L1X Module_Type: 0x%02X", byteData);
       wordData = readWord(0x010F); // VL53L1_IDENTIFICATION__MODEL_ID
@@ -246,6 +247,11 @@ uint16_t VL53L1XSensor::readWord(uint16_t reg_idx){
     ESP_LOGD(TAG, "'%s' - 0x%04X = {0x%02X 0x%02X}", this->name_.c_str(), reg_idx, buffer[0], buffer[1]);
     uint16_t data = (buffer[0] << 8) + buffer[1];
     return data;
+}
+
+void VL53L1XSensor::setI2CAddress(uint8_t addr) {
+    reg(0x0001) = addr;
+    this->set_i2c_address(addr);
 }
 
 } //namespace vl53l1x
