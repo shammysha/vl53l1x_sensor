@@ -6,6 +6,10 @@ external_components:
       type: local
       path: components
 
+# Enable logging
+logger:
+  level: VERBOSE
+
 sensor:
   - platform: vl53l1x_sensor
     name: Empty sensor

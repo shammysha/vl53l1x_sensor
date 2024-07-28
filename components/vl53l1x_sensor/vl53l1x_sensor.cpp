@@ -181,6 +181,7 @@ void VL53L1XSensor::setup() {
         return;
       }
       ESP_LOGI(TAG,"'%s' - Setup completed", this->name_.c_str());
+      startRanging();
 }
 
 void VL53L1XSensor::loop() {
@@ -188,7 +189,20 @@ void VL53L1XSensor::loop() {
 }
 
 void VL53L1XSensor::update() {
-
+    if(checkForDataReady()){
+        int16_t distance_mm = distance();
+        if (distance_mm == -1) {
+          // something went wrong!
+          ESP_LOGD(TAG, "'%s' - Couldn't get distance: 0x%02X", this->name_.c_str(), rangeStatus);
+          this->publish_state(NAN);
+        }else{
+          float distance_m = (float)distance_mm / 1000.0;
+          ESP_LOGD(TAG, "'%s' - Got distance %i mm", this->name_.c_str(), distance_mm);
+          this->publish_state(distance_m);
+        }
+    }else{
+        ESP_LOGD(TAG, "'%s' - data not ready", this->name_.c_str());
+    }
 }
 
 void VL53L1XSensor::dump_config() {
@@ -255,6 +269,67 @@ uint16_t VL53L1XSensor::readWord(uint16_t reg_idx){
 void VL53L1XSensor::setI2CAddress(uint8_t addr) {
     reg16(0x0001) = addr;
     this->set_i2c_address(addr);
+}
+
+int16_t VL53L1XSensor::distance() {
+      rangeStatus = getRangeStatus();
+      if (rangeStatus != 0x0) {
+        return -1;
+      }
+      uint16_t distance = readWord(0x0096);
+      return (int16_t)distance;
+}
+
+int8_t VL53L1XSensor::getRangeStatus()
+{
+   uint8_t RgSt = reg16(0x0089).get();
+   RgSt = RgSt&0x1F;
+   switch (RgSt)
+   {
+   case 9:
+      RgSt = 0;
+      break;
+   case 6:
+      RgSt = 1;
+      break;
+   case 4:
+      RgSt = 2;
+      break;
+   case 8:
+      RgSt = 3;
+      break;
+   case 5:
+      RgSt = 4;
+      break;
+   case 3:
+      RgSt = 5;
+      break;
+   case 19:
+      RgSt = 6;
+      break;
+   case 7:
+      RgSt = 7;
+      break;
+   case 12:
+      RgSt = 9;
+      break;
+   case 18:
+      RgSt = 10;
+      break;
+   case 22:
+      RgSt = 11;
+      break;
+   case 23:
+      RgSt = 12;
+      break;
+   case 13:
+      RgSt = 13;
+      break;
+   default:
+      RgSt = 255;
+      break;
+   }
+   return RgSt;
 }
 
 } //namespace vl53l1x

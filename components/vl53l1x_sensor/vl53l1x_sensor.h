@@ -36,6 +36,8 @@ class VL53L1XSensor : public sensor::Sensor, public PollingComponent, public i2c
     uint16_t sensorId();
     uint16_t readWord(uint16_t reg_idx);
 
+    int8_t getRangeStatus();
+    int16_t distance();
 
     static std::list<VL53L1XSensor *> vl53_sensors;
     GPIOPin *enable_pin_{nullptr};
@@ -46,6 +48,7 @@ class VL53L1XSensor : public sensor::Sensor, public PollingComponent, public i2c
     uint8_t distance_mode_{};
     uint16_t timing_budget_ms_{};
     uint16_t signal_threshold_{};
+    uint8_t rangeStatus{};
 };
 
 } //namespace vl53l1x
