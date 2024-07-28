@@ -240,9 +240,10 @@ uint16_t VL53L1XSensor::sensorId()
 }
 
 uint16_t VL53L1XSensor::readWord(uint16_t reg_idx){
-    uint8_t buffer[2] = {0,0};
+    uint16_t buffer[2] = {0,0};
     buffer[0] = reg(reg_idx).get();
     buffer[1] = reg(reg_idx + 1).get();
+    ESP_LOGD(TAG, "'%s' - 0x%04X = {0x%02X 0x%02X}", this->name_.c_str(), reg_idx, buffer[0], buffer[1]);
     uint16_t data = (buffer[0] << 8) + buffer[1];
     return data;
 }
