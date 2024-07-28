@@ -8,6 +8,7 @@ from esphome.const import (
     CONF_ADDRESS,
     CONF_TIMEOUT,
     CONF_ENABLE_PIN,
+    CONF_IRQ_PIN
 )
 from esphome import pins
 
@@ -53,6 +54,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_LONG_RANGE, default=False): cv.boolean,
             cv.Optional(CONF_TIMEOUT, default="10ms"): check_timeout,
             cv.Optional(CONF_ENABLE_PIN): pins.gpio_output_pin_schema,
+            cv.Optional(CONF_IRQ_PIN): pins.gpio_input_pin_schema,
         }
     )
     .extend(cv.polling_component_schema("60s"))
@@ -71,6 +73,8 @@ async def to_code(config):
     if CONF_ENABLE_PIN in config:
        enable = await cg.gpio_pin_expression(config[CONF_ENABLE_PIN])
        cg.add(var.set_enable_pin(enable))
-
+    if CONF_IRQ_PIN in config:
+        irq = await cg.gpio_pin_expression(config[CONF_IRQ_PIN])
+        cg.add(var.set_irq_pin(irq))
     await i2c.register_i2c_device(var, config)
 

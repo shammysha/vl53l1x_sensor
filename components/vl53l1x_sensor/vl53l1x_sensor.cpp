@@ -188,7 +188,10 @@ void VL53L1XSensor::dump_config() {
     LOG_UPDATE_INTERVAL(this);
     LOG_I2C_DEVICE(this);
     if (this->enable_pin_ != nullptr) {
-    LOG_PIN("  Enable Pin: ", this->enable_pin_);
+        LOG_PIN("  Enable Pin: ", this->enable_pin_);
+    }
+    if (this->irq_pin_ != nullptr) {
+        LOG_PIN("  IRQ Pin: ", this->irq_pin_);
     }
     ESP_LOGCONFIG(TAG, "  Timeout: %u%s", this->timeout_us_, this->timeout_us_ > 0 ? "us" : " (no timeout)");
 }

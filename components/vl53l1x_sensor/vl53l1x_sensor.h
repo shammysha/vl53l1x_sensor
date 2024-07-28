@@ -20,6 +20,8 @@ class VL53L1XSensor : public sensor::Sensor, public PollingComponent, public i2c
     void loop() override;
 
     void set_timeout_us(uint32_t timeout_us) { this->timeout_us_ = timeout_us; }
+    void set_enable_pin(GPIOPin *enable) { this->enable_pin_ = enable; }
+    void set_irq_pin(GPIOPin *irq) { this->irq_pin_ = irq; }
 
     private:
     void startRanging();
@@ -32,8 +34,9 @@ class VL53L1XSensor : public sensor::Sensor, public PollingComponent, public i2c
 
 
     static std::list<VL53L1XSensor *> vl53_sensors;
-    static bool enable_pin_setup_complete;
     GPIOPin *enable_pin_{nullptr};
+    GPIOPin *irq_pin_{nullptr};
+    static bool enable_pin_setup_complete;
     uint16_t timeout_start_us_;
     uint16_t timeout_us_{};
 };
