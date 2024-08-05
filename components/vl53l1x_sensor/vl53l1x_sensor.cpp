@@ -180,6 +180,8 @@ void VL53L1XSensor::setup() {
         this->mark_failed();
         return;
       }
+      set_distance_mode();
+      set_timing_budget();
       ESP_LOGI(TAG,"'%s' - Setup completed", this->name_.c_str());
       startRanging();
 }
@@ -266,6 +268,11 @@ uint16_t VL53L1XSensor::readWord(uint16_t reg_idx){
     return data;
 }
 
+void VL53L1XSensor::writeWord(uint16_t reg_idx, uint16_t data){
+    reg16(reg_idx) = data >> 8;
+    reg16(reg_idx + 1) = (uint8_t)data;
+}
+
 void VL53L1XSensor::setI2CAddress(uint8_t addr) {
     reg16(0x0001) = addr;
     this->set_i2c_address(addr);
@@ -330,6 +337,103 @@ int8_t VL53L1XSensor::getRangeStatus()
       break;
    }
    return RgSt;
+}
+
+void VL53L1XSensor::set_distance_mode() {
+   switch (distance_mode_)
+   {
+   case 1:
+      reg16(0x004B) = 0x14;
+      reg16(0x0060) = 0x07;
+      reg16(0x0063) = 0x05;
+      reg16(0x0069) = 0x38;
+      writeWord(0x0078, 0x0705);
+      writeWord(0x007A, 0x0606);
+      break;
+   case 2:
+     reg16(0x004B) = 0x0A;
+     reg16(0x0060) = 0x0F;
+     reg16(0x0063) = 0x0D;
+     reg16(0x0069) = 0xB8;
+     writeWord(0x0078, 0x0F0D);
+     writeWord(0x007A, 0x0E0E);
+      break;
+   default:
+      break;
+   }
+}
+
+void VL53L1XSensor::set_timing_budget(){
+    if (distance_mode_ == 1)  	/* Short DistanceMode */
+       {
+          switch (timing_budget_ms_)
+          {
+          case 15: /* only available in short distance mode */
+             writeWord(0x005E, 0x01D);
+             writeWord(0x0061, 0x0027);
+             break;
+          case 20:
+             writeWord(0x005E, 0x0051);
+             writeWord(0x0061, 0x006E);
+             break;
+          case 33:
+             writeWord(0x005E, 0x00D6);
+             writeWord(0x0061, 0x006E);
+             break;
+          case 50:
+             writeWord(0x005E, 0x1AE);
+             writeWord(0x0061, 0x01E8);
+             break;
+          case 100:
+             writeWord(0x005E, 0x02E1);
+             writeWord(0x0061, 0x0388);
+             break;
+          case 200:
+             writeWord(0x005E, 0x03E1);
+             writeWord(0x0061, 0x0496);
+             break;
+          case 500:
+             writeWord(0x005E, 0x0591);
+             writeWord(0x0061, 0x05C1);
+             break;
+          default:
+             ESP_LOGE(TAG, "'%s' - invalid timing budget: %ims (distance mode: %i)", this->name_.c_str(), timing_budget_ms_, distance_mode_);
+             break;
+          }
+       }
+       else
+       {
+          switch (timing_budget_ms_)
+          {
+          case 20:
+             writeWord(0x005E, 0x001E);
+             writeWord(0x0061, 0x0022);
+             break;
+          case 33:
+             writeWord(0x005E, 0x0060);
+             writeWord(0x0061, 0x006E);
+             break;
+          case 50:
+             writeWord(0x005E, 0x00AD);
+             writeWord(0x0061, 0x00C6);
+             break;
+          case 100:
+             writeWord(0x005E, 0x01CC);
+             writeWord(0x0061, 0x01EA);
+             break;
+          case 200:
+             writeWord(0x005E, 0x02D9);
+             writeWord(0x0061, 0x02D9);
+             break;
+          case 500:
+             writeWord(0x005E, 0x048F);
+             writeWord(0x0061, 0x048F);
+             break;
+          default:
+             ESP_LOGE(TAG, "'%s' - invalid timing budget: %ims (distance mode: %i)", this->name_.c_str(), timing_budget_ms_, distance_mode_);
+             break;
+          }
+       }
 }
 
 } //namespace vl53l1x
