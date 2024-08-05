@@ -182,6 +182,7 @@ void VL53L1XSensor::setup() {
       }
       set_distance_mode();
       set_timing_budget();
+      set_signal_threshold()
       ESP_LOGI(TAG,"'%s' - Setup completed", this->name_.c_str());
       startRanging();
 }
@@ -434,6 +435,10 @@ void VL53L1XSensor::set_timing_budget(){
              break;
           }
        }
+}
+
+void VL53L1XSensor::set_signal_threshold() {
+    writeWord(0x0066,signal_threshold_>>3);
 }
 
 } //namespace vl53l1x
