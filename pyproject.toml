@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "esphome-vl53l1x"
+version = "0.1.0"
+description = ""
+authors = ["soldier.kam <soldier.kam@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+esphome = "^2024.7.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
