@@ -21,7 +21,6 @@ class VL53L1XSensor : public sensor::Sensor, public PollingComponent, public i2c
 
     void set_timeout_us(uint32_t timeout_us) { this->timeout_us_ = timeout_us; }
     void set_enable_pin(GPIOPin *enable) { this->enable_pin_ = enable; }
-    //void set_irq_pin(GPIOPin *irq) { this->irq_pin_ = irq; }
     void set_distance_mode(uint8_t dm) { this->distance_mode_ = dm; };
     void set_timing_budget(uint16_t ms) { this->timing_budget_ms_ = ms; };
     void set_signal_threshold(uint16_t signal) { this->signal_threshold_ = signal; };
