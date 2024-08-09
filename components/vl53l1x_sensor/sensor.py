@@ -19,12 +19,11 @@ VL53L1XSensor = vl53l1x_ns.class_(
     "VL53L1XSensor", sensor.Sensor, cg.PollingComponent, i2c.I2CDevice
 )
 
-#CONF_SIGNAL_RATE_LIMIT = "signal_rate_limit"
-#CONF_LONG_RANGE = "long_range"
 CONF_TIMING_BUDGET = "timing_budget"
 CONF_DISTANCE_MODE = "distance_mode"
 CONF_SIGNAL_THRESHOLD = "signal_threshold"
-CONF_VALID_TIMING_BUDGET = [15, 20, 33, 50, 100, 200, 500]
+CONF_VALID_TIMING_BUDGET_DM1 = [15, 20, 33, 50, 100, 200, 500]
+CONF_VALID_TIMING_BUDGET_DM2 = [20, 33, 50, 100, 200, 500]
 
 def check_keys(obj):
     if obj[CONF_ADDRESS] != 0x29 and CONF_ENABLE_PIN not in obj:
@@ -34,21 +33,20 @@ def check_keys(obj):
         raise cv.Invalid(msg)
     return obj
 
+def check_timing_budget(obj):
+    timing_budget = cv.positive_time_period_milliseconds(obj[CONF_TIMING_BUDGET])
+    distance_mode = obj[CONF_DISTANCE_MODE]
+    valid_timing_budget = CONF_VALID_TIMING_BUDGET_DM1 if distance_mode == 1 else CONF_VALID_TIMING_BUDGET_DM2
+    if timing_budget.total_milliseconds not in valid_timing_budget:
+        valid = ", ".join([f"{v}ms" for v in valid_timing_budget])
+        raise cv.Invalid(f"Timing budget can not be {timing_budget}. Valid values are: {valid}")
+    return obj
 
 def check_timeout(value):
     value = cv.positive_time_period_microseconds(value)
     if value.total_seconds > 60:
         raise cv.Invalid("Maximum timeout can not be greater then 60 seconds")
     return value
-
-
-def check_timing_budget(value):
-    value = cv.positive_time_period_milliseconds(value)
-    if value.total_milliseconds not in CONF_VALID_TIMING_BUDGET:
-        valid = ", ".join([f"{v}ms" for v in CONF_VALID_TIMING_BUDGET])
-        raise cv.Invalid(f"Timing budget can not be {value}. Valid values are: {valid}")
-    return value
-
 
 CONFIG_SCHEMA = cv.All(
     sensor.sensor_schema(
@@ -60,11 +58,7 @@ CONFIG_SCHEMA = cv.All(
     )
     .extend(
         {
-            # cv.Optional(CONF_SIGNAL_RATE_LIMIT, default=0.25): cv.float_range(
-            #     min=0.0, max=512.0, min_included=False, max_included=False
-            # ),
-            #cv.Optional(CONF_LONG_RANGE, default=False): cv.boolean,
-            cv.Optional(CONF_TIMING_BUDGET, default="100ms"): check_timing_budget,
+            cv.Optional(CONF_TIMING_BUDGET, default="100ms"): cv.positive_time_period_milliseconds,
             cv.Optional(CONF_DISTANCE_MODE, default="2"): cv.int_range(min=1, max=3),
             cv.Optional(CONF_SIGNAL_THRESHOLD, default="2"): cv.int_,
             cv.Optional(CONF_TIMEOUT, default="10ms"): check_timeout,
@@ -75,14 +69,13 @@ CONFIG_SCHEMA = cv.All(
     .extend(cv.polling_component_schema("60s"))
     .extend(i2c.i2c_device_schema(0x29)),
     check_keys,
+    check_timing_budget
     )
 
 
 async def to_code(config):
     var = await sensor.new_sensor(config)
     await cg.register_component(var, config)
-    #cg.add(var.set_signal_rate_limit(config[CONF_SIGNAL_RATE_LIMIT]))
-    #cg.add(var.set_long_range(config[CONF_LONG_RANGE]))
     cg.add(var.set_timing_budget(config[CONF_TIMING_BUDGET]))
     cg.add(var.set_distance_mode(config[CONF_DISTANCE_MODE]))
     cg.add(var.set_signal_threshold(config[CONF_SIGNAL_THRESHOLD]))
