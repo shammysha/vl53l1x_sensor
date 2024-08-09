@@ -182,9 +182,14 @@ void VL53L1XSensor::setup() {
       }
       set_distance_mode();
       set_timing_budget();
-      set_signal_threshold()
-      ESP_LOGI(TAG,"'%s' - Setup completed", this->name_.c_str());
-      startRanging();
+      set_signal_threshold();
+
+    // Set the sensor to the desired final address
+    reg16(0x0001) = final_address & 0x7F;
+    this->set_i2c_address(final_address);
+
+    ESP_LOGI(TAG,"'%s' - Setup completed", this->name_.c_str());
+    startRanging();
 }
 
 void VL53L1XSensor::loop() {
