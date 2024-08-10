@@ -13,8 +13,8 @@ logger:
 sensor:
   - platform: vl53l1x_sensor
     name: Empty sensor
-    timing_budget: 15ms
-    distance_mode: 1
+    timing_budget: 20ms
+    distance_mode: LONG
 
 i2c:
   sda: 4

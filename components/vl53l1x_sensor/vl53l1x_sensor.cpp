@@ -8,6 +8,7 @@ static const char *const TAG = "vl53l1x";
 
 std::list<VL53L1XSensor *> VL53L1XSensor::vl53_sensors;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 bool VL53L1XSensor::enable_pin_setup_complete = false;   // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+static const uint32_t TimingGuard = 4528;
 
 const uint8_t VL51L1X_DEFAULT_CONFIGURATION[] =
 {
@@ -179,7 +180,7 @@ void VL53L1XSensor::setup() {
         return;
     }
     set_distance_mode();
-    set_timing_budget();
+    set_measurement_timing_budget();
     set_signal_threshold();
 
     // Set the sensor to the desired final address
@@ -221,9 +222,9 @@ void VL53L1XSensor::dump_config() {
     if (this->irq_pin_ != nullptr) {
         LOG_PIN("  IRQ Pin: ", this->irq_pin_);
     }
-    ESP_LOGCONFIG(TAG, "  Timeout: %u%s", this->timeout_us_, this->timeout_us_ > 0 ? "us" : " (no timeout)");
+    ESP_LOGCONFIG(TAG, "  Timeout: %u%s", this->timeout_us_, this->timeout_us_ > 0 ? "µs" : " (no timeout)");
     ESP_LOGCONFIG(TAG, "  Distance mode: %u", this->distance_mode_);
-    ESP_LOGCONFIG(TAG, "  Timing budget: %ums", this->timing_budget_ms_);
+    ESP_LOGCONFIG(TAG, "  Timing budget: %uµs", this->timing_budget_us_);
     ESP_LOGCONFIG(TAG, "  Signal threshold: %u", this->signal_threshold_);
 }
 
@@ -340,7 +341,7 @@ int8_t VL53L1XSensor::getRangeStatus() {
 
 void VL53L1XSensor::set_distance_mode() {
     switch (distance_mode_) {
-    case 1:
+    case Short:
         reg16(0x004B) = 0x14;
         reg16(0x0060) = 0x07;
         reg16(0x0063) = 0x05;
@@ -348,7 +349,15 @@ void VL53L1XSensor::set_distance_mode() {
         writeWord(0x0078, 0x0705);
         writeWord(0x007A, 0x0606);
         break;
-    case 2:
+    case Medium:
+        reg16(0x004B) = 0x0D;
+        reg16(0x0060) = 0x0B;
+        reg16(0x0063) = 0x09;
+        reg16(0x0069) = 0x78;
+        writeWord(0x0078, 0x0B09);
+        writeWord(0x007A, 0x0A0A);
+        break;
+    case Long:
         reg16(0x004B) = 0x0A;
         reg16(0x0060) = 0x0F;
         reg16(0x0063) = 0x0D;
@@ -361,72 +370,112 @@ void VL53L1XSensor::set_distance_mode() {
     }
 }
 
-void VL53L1XSensor::set_timing_budget() {
-    if (distance_mode_ == 1) {
-        switch (timing_budget_ms_) {
-        case 15:
-            writeWord(0x005E, 0x01D);
-            writeWord(0x0061, 0x0027);
-            break;
-        case 20:
-            writeWord(0x005E, 0x0051);
-            writeWord(0x0061, 0x006E);
-            break;
-        case 33:
-            writeWord(0x005E, 0x00D6);
-            writeWord(0x0061, 0x006E);
-            break;
-        case 50:
-            writeWord(0x005E, 0x1AE);
-            writeWord(0x0061, 0x01E8);
-            break;
-        case 100:
-            writeWord(0x005E, 0x02E1);
-            writeWord(0x0061, 0x0388);
-            break;
-        case 200:
-            writeWord(0x005E, 0x03E1);
-            writeWord(0x0061, 0x0496);
-            break;
-        case 500:
-            writeWord(0x005E, 0x0591);
-            writeWord(0x0061, 0x05C1);
-            break;
-        default:
-            ESP_LOGE(TAG, "'%s' - invalid timing budget: %ims (distance mode: %i)", this->name_.c_str(), timing_budget_ms_, distance_mode_);
-            break;
-        }
-    } else {
-        switch (timing_budget_ms_) {
-        case 20:
-            writeWord(0x005E, 0x001E);
-            writeWord(0x0061, 0x0022);
-            break;
-        case 33:
-            writeWord(0x005E, 0x0060);
-            writeWord(0x0061, 0x006E);
-            break;
-        case 50:
-            writeWord(0x005E, 0x00AD);
-            writeWord(0x0061, 0x00C6);
-            break;
-        case 100:
-            writeWord(0x005E, 0x01CC);
-            writeWord(0x0061, 0x01EA);
-            break;
-        case 200:
-            writeWord(0x005E, 0x02D9);
-            writeWord(0x0061, 0x02D9);
-            break;
-        case 500:
-            writeWord(0x005E, 0x048F);
-            writeWord(0x0061, 0x048F);
-            break;
-        default:
-            ESP_LOGE(TAG, "'%s' - invalid timing budget: %ims (distance mode: %i)", this->name_.c_str(), timing_budget_ms_, distance_mode_);
-            break;
-        }
+uint32_t VL53L1XSensor::calc_macro_period(uint8_t vcsel_period)
+{
+  // from VL53L1_calc_pll_period_us()
+  // fast osc frequency in 4.12 format; PLL period in 0.24 format
+  uint16_t fast_osc_frequency = reg16(0x0006).get();
+  uint32_t pll_period_us = ((uint32_t)0x01 << 30) / fast_osc_frequency;
+
+  // from VL53L1_decode_vcsel_period()
+  uint8_t vcsel_period_pclks = (vcsel_period + 1) << 1;
+
+  // VL53L1_MACRO_PERIOD_VCSEL_PERIODS = 2304
+  uint32_t macro_period_us = (uint32_t)2304 * pll_period_us;
+  macro_period_us >>= 6;
+  macro_period_us *= vcsel_period_pclks;
+  macro_period_us >>= 6;
+
+  return macro_period_us;
+}
+
+void VL53L1XSensor::set_measurement_timing_budget()
+{
+    // assumes PresetMode is LOWPOWER_AUTONOMOUS
+
+    if (timing_budget_us_ <= TimingGuard) {
+        ESP_LOGE(TAG, "'%s' - invalid timing budget: %iµs (distance mode: %i)", this->name_.c_str(), timing_budget_us_);
+        return;
     }
+
+    uint32_t range_config_timeout_us = timing_budget_us_ -= TimingGuard;
+    if (range_config_timeout_us > 1100000) {
+        ESP_LOGE(TAG, "'%s' - invalid timing budget: %iµs (distance mode: %i)", this->name_.c_str(), timing_budget_us_);
+        return; // FDA_MAX_TIMING_BUDGET_US * 2
+    }
+
+    range_config_timeout_us /= 2;
+
+    // VL53L1_calc_timeout_register_values() begin
+
+    uint32_t macro_period_us;
+
+    // "Update Macro Period for Range A VCSEL Period"
+    macro_period_us = calc_macro_period(reg(0x0060).get());
+
+    // "Update Phase timeout - uses Timing A"
+    // Timeout of 1000 is tuning parm default (TIMED_PHASECAL_CONFIG_TIMEOUT_US_DEFAULT)
+    // via VL53L1_get_preset_mode_timing_cfg().
+    uint32_t phasecal_timeout_mclks = timeout_microseconds_to_mclks(1000, macro_period_us);
+    if (phasecal_timeout_mclks > 0xFF) { phasecal_timeout_mclks = 0xFF; }
+    reg16(0x004B) = phasecal_timeout_mclks;
+
+    // "Update MM Timing A timeout"
+    // Timeout of 1 is tuning parm default (LOWPOWERAUTO_MM_CONFIG_TIMEOUT_US_DEFAULT)
+    // via VL53L1_get_preset_mode_timing_cfg(). With the API, the register
+    // actually ends up with a slightly different value because it gets assigned,
+    // retrieved, recalculated with a different macro period, and reassigned,
+    // but it probably doesn't matter because it seems like the MM ("mode
+    // mitigation"?) sequence steps are disabled in low power auto mode anyway.
+    writeWord(0x005A, encode_timeout(
+    timeout_microseconds_to_mclks(1, macro_period_us)));
+
+    // "Update Range Timing A timeout"
+    writeWord(0x005E, encode_timeout(
+    timeout_microseconds_to_mclks(range_config_timeout_us, macro_period_us)));
+
+    // "Update Macro Period for Range B VCSEL Period"
+    macro_period_us = calc_macro_period(reg16(0x0063).get());
+
+    // "Update MM Timing B timeout"
+    // (See earlier comment about MM Timing A timeout.)
+    writeWord(0x005C, encode_timeout(
+    timeout_microseconds_to_mclks(1, macro_period_us)));
+
+    // "Update Range Timing B timeout"
+    writeWord(0x0061, encode_timeout(
+    timeout_microseconds_to_mclks(range_config_timeout_us, macro_period_us)));
+
+    // VL53L1_calc_timeout_register_values() end
+}
+
+uint32_t VL53L1XSensor::timeout_microseconds_to_mclks(uint32_t timeout_us, uint32_t macro_period_us)
+{
+  return (((uint32_t)timeout_us << 12) + (macro_period_us >> 1)) / macro_period_us;
+}
+
+// Encode sequence step timeout register value from timeout in MCLKs
+// based on VL53L1_encode_timeout()
+uint16_t VL53L1XSensor::encode_timeout(uint32_t timeout_mclks)
+{
+  // encoded format: "(LSByte * 2^MSByte) + 1"
+
+  uint32_t ls_byte = 0;
+  uint16_t ms_byte = 0;
+
+  if (timeout_mclks > 0)
+  {
+    ls_byte = timeout_mclks - 1;
+
+    while ((ls_byte & 0xFFFFFF00) > 0)
+    {
+      ls_byte >>= 1;
+      ms_byte++;
+    }
+
+    return (ms_byte << 8) | (ls_byte & 0xFF);
+  }
+  else { return 0; }
 }
 
 void VL53L1XSensor::set_signal_threshold() {
