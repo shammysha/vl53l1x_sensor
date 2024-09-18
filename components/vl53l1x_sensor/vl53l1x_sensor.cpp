@@ -209,8 +209,8 @@ void VL53L1XSensor::update() {
         }
 //   } else {
 //        ESP_LOGD(TAG, "'%s' - data not ready", this->name_.c_str());
-//#    }
-//}
+//    }
+}
 
 void VL53L1XSensor::dump_config() {
     LOG_SENSOR("", "VL53L1X", this);
