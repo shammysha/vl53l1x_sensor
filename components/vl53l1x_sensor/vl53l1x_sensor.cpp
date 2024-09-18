@@ -196,7 +196,7 @@ void VL53L1XSensor::loop() {
 }
 
 void VL53L1XSensor::update() {
-    if (checkForDataReady()) {
+//   if (checkForDataReady()) {
         int16_t distance_mm = distance();
         if (distance_mm == -1) {
           // something went wrong!
@@ -207,10 +207,10 @@ void VL53L1XSensor::update() {
           ESP_LOGD(TAG, "'%s' - Got distance %i mm", this->name_.c_str(), distance_mm);
           this->publish_state(distance_m);
         }
-    } else {
-        ESP_LOGD(TAG, "'%s' - data not ready", this->name_.c_str());
-    }
-}
+//   } else {
+//        ESP_LOGD(TAG, "'%s' - data not ready", this->name_.c_str());
+//#    }
+//}
 
 void VL53L1XSensor::dump_config() {
     LOG_SENSOR("", "VL53L1X", this);
