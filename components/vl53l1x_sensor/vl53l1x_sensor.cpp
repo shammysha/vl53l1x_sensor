@@ -196,20 +196,20 @@ void VL53L1XSensor::loop() {
 }
 
 void VL53L1XSensor::update() {
-//   if (checkForDataReady()) {
-        int16_t distance_mm = distance();
-        if (distance_mm == -1) {
-          // something went wrong!
-          ESP_LOGD(TAG, "'%s' - Couldn't get distance: 0x%02X", this->name_.c_str(), rangeStatus);
-          this->publish_state(NAN);
-        } else {
-          float distance_m = (float)distance_mm / 1000.0;
-          ESP_LOGD(TAG, "'%s' - Got distance %i mm", this->name_.c_str(), distance_mm);
-          this->publish_state(distance_m);
-        }
-//   } else {
-//        ESP_LOGD(TAG, "'%s' - data not ready", this->name_.c_str());
-//    }
+   if (checkForDataReady()) {
+      int16_t distance_mm = distance();
+      if (distance_mm == -1) {
+       // something went wrong!
+       ESP_LOGD(TAG, "'%s' - Couldn't get distance: 0x%02X", this->name_.c_str(), rangeStatus);
+       this->publish_state(NAN);
+      } else {
+       float distance_m = (float)distance_mm / 1000.0;
+       ESP_LOGD(TAG, "'%s' - Got distance %i mm", this->name_.c_str(), distance_mm);
+       this->publish_state(distance_m);
+      }
+   } else {
+      ESP_LOGD(TAG, "'%s' - data not ready", this->name_.c_str());
+   }
 }
 
 void VL53L1XSensor::dump_config() {
